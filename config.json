@@ -1,0 +1,26 @@
+{
+    "bars": 80,
+    "height": 20,
+    "theme": "default",
+    "mic": false,
+    "device": null,
+    "sensitivity": 1.0,
+    "auto_sens": false,
+    "agc_speed": 0.05,
+    "fps": 60,
+    "style": "default",
+    "no_color": false,
+    "plugin": null,
+    "custom_themes": {
+        "cyberpunk": [
+            "#FF00FF",
+            "#00FFFF",
+            "#00FF00"
+        ],
+        "sunset": [
+            "#FF4500",
+            "#FF8C00",
+            "#FFD700"
+        ]
+    }
+}

@@ -1,0 +1,2 @@
+[console_scripts]
+audi0 = visualizer:main
