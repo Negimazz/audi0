@@ -139,6 +139,7 @@ def parse_args():
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
     parser.add_argument("--save", action="store_true", help="Save the current command-line arguments to config.json and exit")
     parser.add_argument("--menu", action="store_true", help="Open an interactive TUI to configure settings")
+    parser.add_argument("--update", action="store_true", help="Update audi0 to the latest version from GitHub")
     parser.add_argument("--plugin", type=str, default=None, help="Name of a plugin script in the plugins/ folder to use")
     
     parser.set_defaults(**config)
@@ -204,6 +205,7 @@ def interactive_menu(args):
         print("-" * 32)
         print("A. Auto Sensitivity Toggle")
         print("S. Save Config to config.json")
+        print("U. Update audi0")
         print("Q. Quit Menu")
         
         choice = input("\nSelect an option: ").strip().lower()
@@ -245,12 +247,38 @@ def interactive_menu(args):
         elif choice == 's':
             save_config(args)
             input("Press Enter to continue...")
+        elif choice == 'u':
+            update_audi0()
+            input("Press Enter to continue...")
         elif choice == 'q':
             break
+
+def update_audi0():
+    import subprocess
+    print(colorama.Fore.CYAN + "\nChecking for updates..." + colorama.Style.RESET_ALL)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        subprocess.check_call(["git", "-C", base_dir, "pull"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(colorama.Fore.GREEN + "Update via Git completed successfully!" + colorama.Style.RESET_ALL)
+        return
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+        
+    print(colorama.Fore.YELLOW + "Trying to update via pip (global install)..." + colorama.Style.RESET_ALL)
+    try:
+        repo_url = "git+https://github.com/Negimazz/audi0.git"
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", repo_url])
+        print(colorama.Fore.GREEN + "Update via Pip completed successfully!" + colorama.Style.RESET_ALL)
+    except Exception as e:
+        print(colorama.Fore.RED + f"Update failed: {e}\nPlease run 'git pull' manually." + colorama.Style.RESET_ALL)
 
 def main():
     args = parse_args()
     
+    if getattr(args, 'update', False):
+        update_audi0()
+        return
+
     if args.save:
         save_config(args)
         return
