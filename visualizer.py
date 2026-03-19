@@ -33,10 +33,11 @@ ASCII_ART = r"""
 """
 
 THEMES = {
-    'default': [colorama.Fore.GREEN, colorama.Fore.YELLOW, colorama.Fore.RED],
-    'ocean': [colorama.Fore.BLUE, colorama.Fore.CYAN, colorama.Fore.LIGHTBLUE_EX],
-    'fire': [colorama.Fore.RED, colorama.Fore.LIGHTRED_EX, colorama.Fore.YELLOW],
-    'matrix': [colorama.Fore.GREEN, colorama.Fore.LIGHTGREEN_EX, colorama.Fore.GREEN],
+    'default': [(0, 255, 0), (255, 255, 0), (255, 0, 0)],
+    'ocean': [(0, 191, 255), (0, 255, 255), (255, 255, 255)],
+    'fire': [(255, 0, 0), (255, 128, 0), (255, 255, 0)],
+    'matrix': [(0, 50, 0), (0, 255, 0), (200, 255, 200)],
+    'rainbow': [(255, 0, 0), (255, 127, 0), (255, 255, 0), (0, 255, 0), (0, 0, 255), (75, 0, 130), (148, 0, 211)]
 }
 
 STYLES = {
@@ -48,15 +49,32 @@ STYLES = {
 def get_color(color_code, no_color):
     return "" if no_color else color_code
 
-def hex_to_ansi(hex_color):
+def rgb_to_ansi(r, g, b):
+    return f"\033[38;2;{r};{g};{b}m"
+
+def interpolate_color(colors, t):
+    if t <= 0: return colors[0]
+    if t >= 1: return colors[-1]
+    
+    scaled = t * (len(colors) - 1)
+    idx = int(scaled)
+    frac = scaled - idx
+    
+    if idx >= len(colors) - 1: return colors[-1]
+        
+    c1, c2 = colors[idx], colors[idx + 1]
+    r = int(c1[0] + (c2[0] - c1[0]) * frac)
+    g = int(c1[1] + (c2[1] - c1[1]) * frac)
+    b = int(c1[2] + (c2[2] - c1[2]) * frac)
+    return (r, g, b)
+
+def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     if len(hex_color) == 6:
         try:
-            r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-            return f"\033[38;2;{r};{g};{b}m"
-        except ValueError:
-            pass
-    return ""
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        except ValueError: pass
+    return (255, 255, 255)
 
 CONFIG_FILE = "config.json"
 
@@ -67,8 +85,8 @@ def load_config():
                 data = json.load(f)
                 custom_themes = data.get("custom_themes", {})
                 for t_name, hex_list in custom_themes.items():
-                    if isinstance(hex_list, list) and len(hex_list) >= 3:
-                        THEMES[t_name] = [hex_to_ansi(h) for h in hex_list[:3]]
+                    if isinstance(hex_list, list) and len(hex_list) >= 2:
+                        THEMES[t_name] = [hex_to_rgb(h) for h in hex_list]
                 return data
         except Exception as e:
             print(colorama.Fore.RED + f"Error loading config: {e}" + colorama.Style.RESET_ALL)
@@ -132,7 +150,9 @@ def print_intro(args):
     colors = THEMES[args.theme]
     lines = ASCII_ART.strip().split('\n')
     for i, line in enumerate(lines):
-        c = get_color(colors[i % len(colors)], args.no_color)
+        t = i / max(1, len(lines) - 1)
+        r, g, b = interpolate_color(colors, t)
+        c = get_color(rgb_to_ansi(r, g, b), args.no_color)
         print(c + line + get_color(colorama.Style.RESET_ALL, args.no_color))
         time.sleep(0.05)
     
@@ -452,12 +472,10 @@ def main():
                     line = " " * left_padding  # 左側に空白を入れて波形全体を中央に押し出す
                     active_color = ""
                     
-                    if y > max_height * 0.6:
-                        row_color = THEMES[args.theme][2]
-                    elif y > max_height * 0.3:
-                        row_color = THEMES[args.theme][1]
-                    else:
-                        row_color = THEMES[args.theme][0]
+                    if args.theme not in THEMES: args.theme = 'default'
+                    t_y = min(1.0, max(0.0, (y - 1) / max(1, max_height - 1)))
+                    r, g, b = interpolate_color(THEMES[args.theme], t_y)
+                    row_color = rgb_to_ansi(r, g, b)
                             
                     # ターミナルの横幅に収まる範囲のみ描画する
                     for x in range(draw_bars):
